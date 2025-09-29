@@ -33,7 +33,17 @@ export const useFocusTrap = <T extends HTMLElement>() => {
   useEffect(() => {
     const currentRef = ref.current;
     if (currentRef) {
-      currentRef.focus();
+      const focusableElements = currentRef.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select'
+      );
+      const firstElement = focusableElements[0];
+
+      if (firstElement) {
+        firstElement.focus();
+      } else {
+        currentRef.focus();
+      }
+
       document.addEventListener('keydown', handleFocus);
     }
     return () => {
