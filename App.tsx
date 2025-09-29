@@ -9,7 +9,6 @@ import QRScannerPage from './pages/QRScannerPage';
 import LoginPage from './pages/LoginPage';
 import ComunicacionesPage from './pages/ComunicacionesPage';
 import SettingsPage from './pages/SettingsPage';
-import WhatsappSettingsPage from './pages/WhatsappSettingsPage';
 import IntegrationsPage from './pages/IntegrationsPage';
 import { useAuthStore } from './store/authStore';
 import { useUIStore } from './store/uiStore';
@@ -49,7 +48,6 @@ const App: React.FC = () => {
                         <Route path="/usuarios" element={<UsersPage />} />
                         <Route path="/comunicaciones" element={<ComunicacionesPage />} />
                         <Route path="/integrations" element={<IntegrationsPage />} />
-                        <Route path="/integrations/whatsapp" element={<WhatsappSettingsPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="*" element={<Navigate to="/asistencia" />} />
                     </Routes>

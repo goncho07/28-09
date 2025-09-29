@@ -1,24 +1,5 @@
 
 import { CalendarEvent } from '../types';
-import { format } from 'date-fns';
-
-const getNthWeekdayOfMonth = (year: number, month: number, dayOfWeek: number, n: number): Date => {
-    const d = new Date(year, month, 1);
-    let count = 0;
-    // Adjust for week start if needed, but getDay() is consistent (0=Sun, 1=Mon...)
-    while (d.getMonth() === month) {
-        if (d.getDay() === dayOfWeek) {
-            count++;
-            if (count === n) {
-                return d;
-            }
-        }
-        d.setDate(d.getDate() + 1);
-    }
-    // Fallback, should not happen if n is valid (e.g., not 5th Sunday in a month with 4)
-    return new Date(year, month, 1);
-};
-
 
 export const mockEvents: CalendarEvent[] = [
   // --- Gestión Escolar 2025 ---
@@ -59,7 +40,7 @@ export const mockEvents: CalendarEvent[] = [
   { id: 'civ-abr-2', title: 'Día Mundial del Libro Infantil', date: '2025-04-02', category: 'Cívico' },
   { id: 'civ-abr-3', title: 'Día Mundial del Autismo', date: '2025-04-02', category: 'Cívico' },
   { id: 'civ-abr-4', title: 'Día Mundial de la Salud', date: '2025-04-07', category: 'Cívico' },
-  { id: 'civ-abr-5', title: 'Día del Niño Peruano', date: format(getNthWeekdayOfMonth(2025, 3, 0, 2), 'yyyy-MM-dd'), category: 'Cívico' },
+  { id: 'civ-abr-5', title: 'Día del Niño Peruano', date: '2025-04-13', category: 'Cívico' },
   { id: 'civ-abr-6', title: 'Nacimiento del Inca Garcilaso', date: '2025-04-12', category: 'Cívico' },
   { id: 'civ-abr-7', title: 'Día de las Américas', date: '2025-04-14', category: 'Cívico' },
   { id: 'civ-abr-8', title: 'Fallecimiento de César Vallejo', date: '2025-04-15', category: 'Cívico' },
@@ -67,7 +48,7 @@ export const mockEvents: CalendarEvent[] = [
   // Mayo
   { id: 'civ-may-1', title: 'Día Mundial del Trabajo', date: '2025-05-01', category: 'Feriado' },
   { id: 'civ-may-2', title: 'Combate del Dos de Mayo', date: '2025-05-02', category: 'Cívico' },
-  { id: 'civ-may-3', title: 'Día de la Madre', date: format(getNthWeekdayOfMonth(2025, 4, 0, 2), 'yyyy-MM-dd'), category: 'Cívico' },
+  { id: 'civ-may-3', title: 'Día de la Madre', date: '2025-05-11', category: 'Cívico' },
   { id: 'civ-may-4', title: 'Aniv. María Parado de Bellido', date: '2025-05-11', category: 'Cívico' },
   { id: 'civ-may-5', title: 'Día Escolar de las Matemáticas', date: '2025-05-12', category: 'Cívico' },
   { id: 'civ-may-6', title: 'Día Mundial del Internet', date: '2025-05-17', category: 'Cívico' },
@@ -81,7 +62,7 @@ export const mockEvents: CalendarEvent[] = [
   { id: 'civ-jun-2', title: 'Batalla de Arica y Día del Héroe', date: '2025-06-07', category: 'Cívico' },
   { id: 'civ-jun-3', title: 'Día Mundial de los Océanos', date: '2025-06-08', category: 'Cívico' },
   { id: 'civ-jun-4', title: 'Día contra el Trabajo Infantil', date: '2025-06-12', category: 'Cívico' },
-  { id: 'civ-jun-5', title: 'Día del Padre', date: format(getNthWeekdayOfMonth(2025, 5, 0, 3), 'yyyy-MM-dd'), category: 'Cívico' },
+  { id: 'civ-jun-5', title: 'Día del Padre', date: '2025-06-15', category: 'Cívico' },
   { id: 'civ-jun-6', title: 'Fiesta del Sol (Inti Raymi)', date: '2025-06-24', category: 'Cívico' },
   { id: 'civ-jun-7', title: 'Día del Campesino', date: '2025-06-24', category: 'Cívico' },
   { id: 'civ-jun-8', title: 'Día de San Pedro y San Pablo', date: '2025-06-29', category: 'Feriado' },
@@ -99,7 +80,7 @@ export const mockEvents: CalendarEvent[] = [
   // Septiembre
   { id: 'civ-sep-1', title: 'Semana de la Educación Vial', date: '2025-09-01', category: 'Cívico' },
   { id: 'civ-sep-2', title: 'Día Intl. de la Alfabetización', date: '2025-09-08', category: 'Cívico' },
-  { id: 'civ-sep-3', title: 'Día Internacional por la Paz', date: format(getNthWeekdayOfMonth(2025, 8, 2, 3), 'yyyy-MM-dd'), category: 'Cívico' },
+  { id: 'civ-sep-3', title: 'Día Internacional por la Paz', date: '2025-09-16', category: 'Cívico' },
   { id: 'civ-sep-4', title: 'Día de la Primavera', date: '2025-09-23', category: 'Cívico' },
   // Octubre
   { id: 'civ-oct-1', title: 'Día de Ricardo Palma', date: '2025-10-06', category: 'Cívico' },

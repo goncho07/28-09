@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Dot } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
+import { startOfMonth, endOfMonth, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
 import startOfWeek from 'date-fns/startOfWeek';
 import parseISO from 'date-fns/parseISO';
 import { CalendarEvent } from '../../types';
+import { formatInPeru, getPeruTime } from '../../utils/time';
 
 interface CalendarProps {
   currentDate: Date;
@@ -43,7 +44,7 @@ const Calendar: React.FC<CalendarProps> = ({ currentDate, events, selectedDate, 
         {days.map(day => {
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isSelected = isSameDay(day, selectedDate);
-          const isTodaysDate = isToday(day);
+          const isTodaysDate = isSameDay(day, getPeruTime());
           
           const dayEvents = events.filter(e => isSameDay(parseISO(e.date), day));
 
@@ -54,7 +55,7 @@ const Calendar: React.FC<CalendarProps> = ({ currentDate, events, selectedDate, 
               className={`relative h-36 p-3 border-b border-r border-slate-100 dark:border-slate-700 text-left transition-colors focus:z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-indigo-500 ${isCurrentMonth ? '' : 'bg-slate-50 dark:bg-slate-800/50'} ${!isSelected && isCurrentMonth ? 'hover:bg-slate-100 dark:hover:bg-slate-700/50' : ''} ${isSelected ? 'bg-indigo-100 dark:bg-indigo-500/20' : ''}`}
             >
               <div className={`flex items-center justify-center h-8 w-8 text-base font-medium rounded-full ${isTodaysDate ? 'bg-indigo-600 text-white font-bold' : isSelected ? 'bg-indigo-600 text-white font-bold' : ''} ${!isCurrentMonth ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-200'}`}>
-                {format(day, 'd')}
+                {formatInPeru(day, 'd')}
               </div>
               <div className="mt-2 space-y-1.5 overflow-y-auto max-h-20">
                 {dayEvents.slice(0, 3).map(event => (

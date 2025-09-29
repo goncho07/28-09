@@ -3,50 +3,38 @@ import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
-  UsersRound, UserPlus, UploadCloud, KeyRound, Shield, GraduationCap, Users2, Search,
-  ArrowRight, User, History, X, Save, Edit, MoreVertical, Check, Trash2, ArrowLeft,
-  File as FileIcon, Upload, CheckCircle, AlertCircle
+    UsersRound, UserPlus, UploadCloud, KeyRound, Shield, GraduationCap, Users2, Search,
+    ArrowRight, User, History, X, Save, Edit, MoreVertical, Check, Trash2, ArrowLeft,
+    File as FileIcon, Upload, CheckCircle, AlertCircle
 } from 'lucide-react';
-
 import { staff as initialStaff } from '../data/users';
 import { students as initialStudents } from '../data/students';
 import { parents as initialParents } from '../data/parents';
 import { activityLogs as initialActivityLogs } from '../data/activityLogs';
-
 import { GenericUser, UserStatus, Student, Staff, ParentTutor, ActivityLog } from '../types';
 import { track } from '../analytics/track';
 import { useHotkey } from '../hooks/useHotkey';
 import { useDebounce } from '../hooks/useDebounce';
 import { tokens } from '../design/tokens';
 import Button from '../ui/Button';
+import { pageTransitionVariants, itemVariants } from '../design/animations';
+import Papa from 'papaparse';
 
 // --- TYPE GUARDS & HELPERS ---
 const isStudent = (user: GenericUser): user is Student => 'studentCode' in user;
 const getFullName = (user: GenericUser): string => isStudent(user) ? user.fullName : user.name;
 const getIdentifier = (user: GenericUser): string => isStudent(user) ? user.documentNumber : user.dni;
 const getRole = (user: GenericUser): string => {
-  if (isStudent(user)) return 'Estudiante';
-  if ('relation' in user) return 'Apoderado';
-  if ('category' in user) return user.category;
-  return 'N/A';
+    if (isStudent(user)) return 'Estudiante';
+    if ('relation' in user) return 'Apoderado';
+    if ('category' in user) return user.category;
+    return 'N/A';
 };
 
 // --- DESIGN TOKENS (for self-containment) ---
 const pageTokens = {
-  card: `bg-white dark:bg-[${tokens.color.surface}] rounded-[${tokens.radius.lg}px] border border-slate-200/80 dark:border-[${tokens.color.border}] transition-shadow shadow-sm`,
-  focusVisible: `focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[${tokens.color.bg}] focus-visible:ring-[${tokens.color.focus}]`,
-};
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 }
-  }
-};
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1 }
+    card: `bg-white dark:bg-[${tokens.color.surface}] rounded-[${tokens.radius.lg}px] border border-slate-200/80 dark:border-[${tokens.color.border}] transition-shadow shadow-sm`,
+    focusVisible: `focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[${tokens.color.bg}] focus-visible:ring-[${tokens.color.focus}]`,
 };
 
 
@@ -195,11 +183,39 @@ const UserImportModal: React.FC<{ isOpen: boolean; onClose: () => void; onImport
     const handleParseAndValidate = () => {
         if (!file) return;
         setIsLoading(true);
-        setTimeout(() => { // Simulate processing
-            setParsedData({ data: [{ name: 'NUEVO USUARIO 1', dni: '99999991', role: 'Docente' }, { name: 'NUEVO USUARIO 2', dni: '99999992', role: 'Estudiante'}], errors: [] });
-            setStep(2);
-            setIsLoading(false);
-        }, 1500);
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const requiredFields = ['nombre_completo', 'dni', 'rol'];
+                const validUsers: any[] = [];
+                const errors: any[] = [];
+
+                results.data.forEach((row: any, index) => {
+                    const missingFields = requiredFields.filter(field => !row[field] || !row[field].trim());
+                    if (missingFields.length > 0) {
+                        errors.push({ row: index + 2, message: `Faltan campos obligatorios: ${missingFields.join(', ')}` });
+                    } else {
+                        validUsers.push({
+                            name: row.nombre_completo,
+                            dni: row.dni,
+                            email: row.email || '',
+                            role: row.rol,
+                            tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()) : [],
+                        });
+                    }
+                });
+
+                setParsedData({ data: validUsers, errors });
+                setStep(2);
+                setIsLoading(false);
+            },
+            error: (error: any) => {
+                toast.error(`Error al procesar el archivo: ${error.message}`);
+                setIsLoading(false);
+            }
+        });
     };
 
     const handleConfirmImport = () => {
@@ -383,53 +399,79 @@ const UsersPage: React.FC = () => {
     }
     
     const handleImportUsers = (newUsers: any[]) => {
-        const createdUsers = newUsers.map(u => ({
-            ...u,
-            avatarUrl: `https://ui-avatars.com/api/?name=${u.name.replace(/\s/g, '+')}`,
-            status: 'Pendiente' as UserStatus,
-            category: 'Docente',
-            area: 'N/A',
-            sede: 'Norte',
-            tags: [],
-        }));
-        setStaff(prev => [...createdUsers, ...prev]);
-        toast.success(`${createdUsers.length} usuarios importados correctamente.`);
+        const newStaff: Staff[] = [];
+        const newStudents: Student[] = [];
+        const newParents: ParentTutor[] = [];
+
+        newUsers.forEach(u => {
+            const role = u.role.toLowerCase();
+            const avatarUrl = `https://ui-avatars.com/api/?name=${u.name.replace(/\s/g, '+')}`;
+
+            if (['docente', 'administrativo', 'apoyo', 'personal'].includes(role)) {
+                newStaff.push({
+                    dni: u.dni,
+                    name: u.name,
+                    avatarUrl,
+                    status: 'Pendiente',
+                    category: (role.charAt(0).toUpperCase() + role.slice(1)) as Staff['category'],
+                    role: u.role,
+                    area: 'N/A',
+                    sede: 'Norte',
+                    tags: u.tags || [],
+                });
+            } else if (role === 'estudiante') {
+                newStudents.push({
+                    studentCode: `S-${u.dni}`,
+                    fullName: u.name,
+                    documentNumber: u.dni,
+                    avatarUrl,
+                    status: 'Pendiente',
+                    grade: 'N/A',
+                    section: 'N/A',
+                    condition: 'Regular',
+                    sede: 'Norte',
+                });
+            } else if (role === 'apoderado') {
+                newParents.push({
+                    dni: u.dni,
+                    name: u.name,
+                    avatarUrl,
+                    status: 'Pendiente',
+                    relation: 'Padre/Madre',
+                    studentsInCharge: [],
+                });
+            }
+        });
+
+        if (newStaff.length > 0) setStaff(prev => [...newStaff, ...prev]);
+        if (newStudents.length > 0) setStudents(prev => [...newStudents, ...prev]);
+        if (newParents.length > 0) setParents(prev => [...newParents, ...prev]);
+
+        toast.success(`${newUsers.length} usuarios importados correctamente.`);
     };
     
     const renderDashboardView = () => (
-        <motion.div 
-            className="space-y-6"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-        >
+        <div className="space-y-8">
             <motion.div variants={itemVariants}>
-                <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Panel de Usuarios</h1>
+                <h1 className="text-4xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Panel de Usuarios</h1>
+                <p className="text-lg text-slate-500 dark:text-slate-400 mt-1">Gestiona personal, estudiantes y apoderados.</p>
             </motion.div>
             
-            <motion.section 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <KpiCard title="Personal" value={counts.staff} icon={Shield} onClick={() => handleCollectionClick('staff')} />
                 <KpiCard title="Estudiantes" value={counts.students} icon={GraduationCap} onClick={() => handleCollectionClick('students')} />
                 <KpiCard title="Apoderados" value={counts.parents} icon={Users2} onClick={() => handleCollectionClick('parents')} />
                 <KpiCard title="Total" value={counts.total} icon={UsersRound} onClick={() => handleCollectionClick('total')} />
-            </motion.section>
+            </div>
 
-            <motion.section 
-                 variants={{
-                    visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
-                    hidden: { opacity: 0 }
-                 }}
-                initial="hidden"
-                animate="visible"
-                className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <ActionTile title="Crear Nuevo Usuario" icon={UserPlus} onClick={() => openDrawer(null)} />
-              <ActionTile title="Importar desde CSV" icon={UploadCloud} onClick={() => { track('user_import_started'); setImportModalOpen(true); }} />
-              <ActionTile title="Restablecer Claves" icon={KeyRound} onClick={() => toast('Función de reseteo masivo no implementada.')} />
-            </motion.section>
+            <div>
+                <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-4">Acciones Rápidas</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <ActionTile title="Crear Nuevo Usuario" icon={UserPlus} onClick={() => openDrawer(null)} />
+                    <ActionTile title="Importar desde CSV" icon={UploadCloud} onClick={() => { track('user_import_started'); setImportModalOpen(true); }} />
+                    <ActionTile title="Restablecer Claves" icon={KeyRound} onClick={() => toast('Función de reseteo masivo no implementada.')} />
+                </div>
+            </div>
 
             <motion.div variants={itemVariants}>
                 <button onClick={() => setPaletteOpen(true)} className={`w-full h-16 flex items-center pl-6 text-left text-lg text-slate-500 dark:text-slate-400 border rounded-[${tokens.radius.lg}px] ${pageTokens.card} hover:shadow-md ${pageTokens.focusVisible}`}>
@@ -438,61 +480,73 @@ const UsersPage: React.FC = () => {
                     <span className="ml-auto mr-4 text-sm border px-2 py-0.5 rounded-md">Ctrl+K</span>
                 </button>
             </motion.div>
-        </motion.div>
+        </div>
     );
     
     const renderListView = () => (
-      <div>
-        <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-                <Button variant="secondary" aria-label="Volver al panel" onClick={handleBackToDashboard} icon={ArrowLeft} />
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{listTitle}</h1>
-                    <p className="text-slate-500 dark:text-slate-400">{filteredUsers.length} perfiles encontrados.</p>
+        <div>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                    <Button variant="secondary" size="lg" aria-label="Volver al panel" onClick={handleBackToDashboard} icon={ArrowLeft} />
+                    <div>
+                        <h1 className="text-4xl font-bold tracking-tight text-slate-800 dark:text-slate-100">{listTitle}</h1>
+                        <p className="text-lg text-slate-500 dark:text-slate-400 mt-1">{filteredUsers.length} perfiles encontrados.</p>
+                    </div>
                 </div>
+                <Button variant="primary" size="lg" aria-label="Crear Usuario" icon={UserPlus} onClick={() => openDrawer(null)}>Crear Usuario</Button>
             </div>
-            <Button variant="primary" aria-label="Crear Usuario" icon={UserPlus} onClick={() => openDrawer(null)}>Crear Usuario</Button>
+
+            <div className={`overflow-x-auto ${pageTokens.card} !p-0`}>
+                <table className="w-full text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-800/50">
+                        <tr>
+                            <th className="p-4 w-12"><input type="checkbox" className={`h-5 w-5 rounded border-slate-300 text-indigo-600 ${pageTokens.focusVisible}`} /></th>
+                            <th className="px-6 py-4 text-base font-semibold text-slate-600 dark:text-slate-300">Nombre</th>
+                            <th className="px-6 py-4 text-base font-semibold text-slate-600 dark:text-slate-300">Rol</th>
+                            <th className="px-6 py-4 text-base font-semibold text-slate-600 dark:text-slate-300">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredUsers.map(user => (
+                            <tr key={getIdentifier(user)} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50" aria-selected={selectedUsers.has(getIdentifier(user))}>
+                                <td className="p-4 w-12"><input type="checkbox" checked={selectedUsers.has(getIdentifier(user))} onChange={() => {
+                                    setSelectedUsers(p => { const n = new Set(p); n.has(getIdentifier(user)) ? n.delete(getIdentifier(user)) : n.add(getIdentifier(user)); return n; })
+                                }} className={`h-5 w-5 rounded border-slate-300 text-indigo-600 ${pageTokens.focusVisible}`} /></td>
+                                <td className="px-6 py-4">
+                                    <button onClick={() => openDrawer(user)} className={`flex items-center gap-4 text-left rounded ${pageTokens.focusVisible}`}>
+                                        <img src={user.avatarUrl} alt={getFullName(user)} className="w-12 h-12 rounded-full" />
+                                        <div>
+                                            <p className="font-semibold text-lg text-slate-800 dark:text-slate-100 capitalize">{getFullName(user).toLowerCase()}</p>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400">{getIdentifier(user)}</p>
+                                        </div>
+                                    </button>
+                                </td>
+                                <td className="px-6 py-4 text-base text-slate-600 dark:text-slate-300">{getRole(user)}</td>
+                                <td className="px-6 py-4"><span className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${user.status === 'Activo' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}`}>{user.status}</span></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-        
-        <div className={`overflow-x-auto ${pageTokens.card} !p-0`}>
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 dark:bg-slate-800/50">
-                <tr>
-                    <th className="p-4 w-12"><input type="checkbox" className={`h-5 w-5 rounded border-slate-300 text-indigo-600 ${pageTokens.focusVisible}`} /></th>
-                    <th className="px-4 py-3 text-sm font-semibold text-slate-600 dark:text-slate-300">Nombre</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-slate-600 dark:text-slate-300">Rol</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-slate-600 dark:text-slate-300">Estado</th>
-                </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map(user => (
-                <tr key={getIdentifier(user)} className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50" aria-selected={selectedUsers.has(getIdentifier(user))}>
-                    <td className="p-4 w-12"><input type="checkbox" checked={selectedUsers.has(getIdentifier(user))} onChange={() => {
-                        setSelectedUsers(p => { const n = new Set(p); n.has(getIdentifier(user)) ? n.delete(getIdentifier(user)) : n.add(getIdentifier(user)); return n; })
-                    }} className={`h-5 w-5 rounded border-slate-300 text-indigo-600 ${pageTokens.focusVisible}`} /></td>
-                    <td className="px-4 py-3">
-                        <button onClick={() => openDrawer(user)} className={`flex items-center gap-3 text-left rounded ${pageTokens.focusVisible}`}>
-                            <img src={user.avatarUrl} alt={getFullName(user)} className="w-11 h-11 rounded-full" />
-                            <div>
-                                <p className="font-semibold text-slate-800 dark:text-slate-100 capitalize">{getFullName(user).toLowerCase()}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">{getIdentifier(user)}</p>
-                            </div>
-                        </button>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{getRole(user)}</td>
-                    <td className="px-4 py-3"><span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${user.status === 'Activo' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}`}>{user.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     );
 
     return (
-        <div style={{ minHeight: 'calc(100vh - 10rem)' }}>
+        <motion.div
+            style={{ minHeight: 'calc(100vh - 10rem)' }}
+            variants={pageTransitionVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+        >
             <AnimatePresence mode="wait">
-                <motion.div key={view} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <motion.div
+                    key={view}
+                    variants={pageTransitionVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                >
                     {view === 'dashboard' ? renderDashboardView() : renderListView()}
                 </motion.div>
             </AnimatePresence>

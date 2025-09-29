@@ -20,11 +20,3 @@ export const directorNavItems: NavItem[] = [
   { to: '/integrations', text: 'Integraciones', icon: Network },
   { to: '/settings', text: 'Ajustes', icon: Cog },
 ];
-
-export const teacherNavItems: NavItem[] = [
-  { to: '/', text: 'Inicio', icon: Home },
-  { to: '/asistencia', text: 'Asistencia', icon: ClipboardCheck },
-  { to: '/registrar-notas', text: 'Registrar Notas', icon: Edit },
-  { to: '/libro-calificaciones', text: 'Calificaciones', icon: BookCheck },
-  { to: '/comunicaciones', text: 'Comunicaciones', icon: MessageSquare },
-];
