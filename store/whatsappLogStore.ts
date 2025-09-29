@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WhatsappMessage } from '../types';
 import toast from 'react-hot-toast';
+import { getPeruTime } from '../utils/time';
 
 interface WhatsappLogState {
   messages: WhatsappMessage[];
@@ -18,7 +19,7 @@ const useWhatsappLogStore = create<WhatsappLogState>()(
         const newMessage: WhatsappMessage = {
           ...message,
           id: `msg-${Date.now()}`,
-          timestamp: new Date().toISOString(),
+          timestamp: getPeruTime().toISOString(),
           status: 'en cola',
         };
         set((state) => ({ messages: [newMessage, ...state.messages] }));

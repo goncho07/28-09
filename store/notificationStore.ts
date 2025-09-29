@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Notification } from '../types';
+import { getPeruTime } from '../utils/time';
 
 interface NotificationState {
   notifications: Notification[];
@@ -14,7 +15,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   addNotification: (message, action) =>
     set((state) => ({
       notifications: [
-        { id: Date.now(), message, timestamp: new Date(), read: false, action },
+        { id: Date.now(), message, timestamp: getPeruTime(), read: false, action },
         ...state.notifications,
       ].slice(0, 50), // Keep last 50 notifications
     })),
